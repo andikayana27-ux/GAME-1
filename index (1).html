@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tebak Angka Buah</title>
+<style>
+:root{--bg:#f6fbf4;--card:#fff;--ink:#1f2d1f;--mut:#5b6b5b;--acc:#2e8b57;--bad:#c0392b;--line:#d5e5d2;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#121a14;--card:#1d2a20;--ink:#e8f2e8;--mut:#9fb3a0;--acc:#5fcf8f;--bad:#ff7b6b;--line:#2f4433;color-scheme:dark}}
+*{box-sizing:border-box}html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",sans-serif;padding:12px}
+main{max-width:720px;margin:0 auto}
+h1{font-size:1.4rem;margin:.2rem 0}
+p.s{color:var(--mut);margin:.2rem 0 .8rem}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px}
+label{display:block;font-weight:600;margin:.5rem 0 .2rem}
+select,button{font:inherit;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--ink);width:100%}
+button.p{background:var(--acc);color:#fff;border:0;font-weight:700;margin-top:12px}
+button.g{width:auto;margin:6px 6px 0 0}
+.hud{display:flex;justify-content:space-between;color:var(--mut);font-size:.95rem;margin-bottom:8px}
+#bub{text-align:center;font-size:2rem;font-weight:800;padding:10px;border:2px dashed var(--acc);border-radius:16px;margin-bottom:8px}
+#bub button{width:auto;font-size:1.6rem}
+#area{position:relative;height:62vh;min-height:400px;overflow:hidden;border-radius:14px;background:linear-gradient(#cfeefc,#e9f9d9);border:1px solid var(--line)}
+.f{position:absolute;left:0;top:0;width:120px;border:0;font:inherit;text-align:center;background:rgba(255,255,255,.95);color:#1f2d1f;border-radius:14px;padding:8px 6px 10px;cursor:pointer;touch-action:manipulation;box-shadow:0 2px 6px rgba(0,0,0,.2);line-height:1.2;will-change:transform}
+.f .e{font-size:2.2rem;display:block}.f .t{font-weight:700;font-size:1rem}
+.f.x{opacity:.25;pointer-events:none}.f.ok{opacity:0;transition:opacity .5s}
+.wrap{overflow-x:auto}table{border-collapse:collapse;width:100%;font-size:.92rem}
+th,td{padding:6px 8px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
+.b{color:var(--bad);font-weight:700}.o{color:var(--acc);font-weight:700}.hide{display:none}
+</style>
+</head>
+<body>
+<main>
+<h1>🍉 Tebak Angka Buah</h1>
+<p class="s">Ketuk buah yang cocok dengan soal di dalam gelembung.</p>
+
+<section id="setup" class="card">
+<label for="mode">Jenis permainan</label>
+<select id="mode">
+<option value="1">Angka ➜ Kata (lihat 17, pilih “tujuh belas”)</option>
+<option value="2">Kata ➜ Angka (baca “tujuh belas”, pilih 17)</option>
+<option value="3">Dengar ➜ Angka (dengar lafal, pilih angka)</option>
+</select>
+<label for="lvl">Tingkat</label>
+<select id="lvl">
+<option value="1">1 · 0–10</option>
+<option value="2">2 · 11–20 (belas)</option>
+<option value="3">3 · 21–100 (puluh)</option>
+<option value="4">4 · 101–999 (ratus)</option>
+</select>
+<label for="spd">Kecepatan gerak buah</label>
+<select id="spd">
+<option value="0.6">Pelan</option>
+<option value="1" selected>Sedang</option>
+<option value="1.7">Cepat</option>
+<option value="0">Diam (tanpa gerak)</option>
+</select>
+<label for="nm">Nama siswa (opsional)</label>
+<input id="nm" style="font:inherit;padding:10px;border-radius:10px;border:1px solid var(--line);width:100%;background:var(--card);color:var(--ink)">
+<button class="p" id="go">Mulai (10 soal)</button>
+</section>
+
+<section id="play" class="hide">
+<div class="hud"><span id="hq"></span><span id="hs"></span></div>
+<div id="bub"></div>
+<div id="area"></div>
+</section>
+
+<section id="res" class="card hide">
+<h2 style="margin:0 0 6px">Hasil</h2>
+<div id="sum"></div>
+<div class="wrap"><table id="tb"></table></div>
+<button class="g" id="cp">Salin hasil</button><button class="g" id="again">Main lagi</button>
+</section>
+</main>
+<script>
+const $=s=>document.querySelector(s);
+const D=["nol","satu","dua","tiga","empat","lima","enam","tujuh","delapan","sembilan","sepuluh","sebelas"];
+function kata(n){
+ if(n<12)return D[n];
+ if(n<20)return D[n-10]+" belas";
+ if(n<100)return D[Math.floor(n/10)]+" puluh"+(n%10?" "+D[n%10]:"");
+ if(n<200)return "seratus"+(n%100?" "+kata(n%100):"");
+ if(n<1000)return D[Math.floor(n/100)]+" ratus"+(n%100?" "+kata(n%100):"");
+ return "seribu";
+}
+const R={1:[0,10],2:[11,20],3:[21,100],4:[101,999]};
+const FR=["🍎","🍊","🍋","🍉","🍇","🍓","🍌","🍐","🍑","🍍"];
+const rnd=(a,b)=>a+Math.floor(Math.random()*(b-a+1));
+const shuf=a=>a.map(v=>[Math.random(),v]).sort((x,y)=>x[0]-y[0]).map(x=>x[1]);
+let S,lock,fruits=[],raf;
+
+function say(t){try{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(t);u.lang="id-ID";u.rate=.85;speechSynthesis.speak(u)}catch(e){}}
+
+function start(){
+ const lv=+$("#lvl").value,[a,b]=R[lv];
+ const pool=[];while(pool.length<10){const n=rnd(a,b);if(!pool.includes(n))pool.push(n)}
+ S={mode:+$("#mode").value,lv,qs:pool,i:0,log:[],name:$("#nm").value.trim(),t0:0,miss:false,ok:0,spd:matchMedia("(prefers-reduced-motion:reduce)").matches?0:+$("#spd").value};
+ $("#setup").classList.add("hide");$("#res").classList.add("hide");$("#play").classList.remove("hide");
+ cancelAnimationFrame(raf);
+ next();
+ tick();
+}
+
+function opts(n){
+ const [a,b]=R[S.lv];
+ let c=[1,-1,2,-2,3,-3,10,-10,100,-100].map(d=>n+d).filter(v=>v>=a&&v<=b&&v!==n);
+ c=shuf([...new Set(c)]);
+ const rv=n>=10&&n<100?+String(n).split("").reverse().join(""):n;
+ if(rv!==n&&rv>=a&&rv<=b)c=[rv,...c.filter(v=>v!==rv)];
+ c=c.slice(0,4);
+ while(c.length<4){const v=rnd(a,b);if(v!==n&&!c.includes(v))c.push(v)}
+ return shuf([n,...c]);
+}
+
+function next(){
+ if(S.i>=10)return finish();
+ lock=false;S.miss=false;S.t0=Date.now();
+ const n=S.qs[S.i];
+ $("#hq").textContent="Soal "+(S.i+1)+" / 10";$("#hs").textContent="Benar pertama kali: "+S.ok;
+ const bub=$("#bub");
+ if(S.mode===1)bub.textContent=n;
+ else if(S.mode===2)bub.textContent=kata(n);
+ else{bub.innerHTML='<button id="sp">🔊 Dengarkan</button>';$("#sp").onclick=()=>say(kata(n));say(kata(n))}
+ const area=$("#area");area.innerHTML="";fruits=[];
+ const ch=opts(n),em=shuf(FR);
+ ch.forEach((v,k)=>{
+  const el=document.createElement("button");
+  el.className="f";
+  el.innerHTML='<span class="e">'+em[k]+'</span><span class="t">'+(S.mode===1?kata(v):v)+'</span>';
+  const o={el,v,x:0,y:0,vx:0,vy:0,w:0,h:0};
+  el.onclick=()=>pick(o);area.appendChild(el);fruits.push(o);
+ });
+ const W=area.clientWidth,H=area.clientHeight;
+ fruits.forEach((o,k)=>{
+  o.w=o.el.offsetWidth;o.h=o.el.offsetHeight;
+  for(let t=0;t<300;t++){
+   o.x=rnd(0,Math.max(0,W-o.w));o.y=rnd(0,Math.max(0,H-o.h));
+   if(!fruits.slice(0,k).some(p=>{const q=ov(o,p);return q[0]>0&&q[1]>0}))break;
+  }
+  const ang=Math.random()*6.28,sp=(.5+Math.random()*.5)*S.spd;
+  o.vx=Math.cos(ang)*sp;o.vy=Math.sin(ang)*sp;
+  o.el.style.transform="translate("+o.x+"px,"+o.y+"px)";
+ });
+}
+
+function pick(o){
+ if(lock)return;
+ const n=S.qs[S.i];
+ if(o.v===n){
+  lock=true;
+  if(!S.miss)S.ok++;
+  S.log.push({n,first:S.first??n,ok:!S.miss,sec:((Date.now()-S.t0)/1000).toFixed(1)});
+  S.first=undefined;
+  o.el.classList.add("ok");o.el.querySelector(".e").textContent="💥";
+  setTimeout(()=>{S.i++;next()},600);
+ }else{
+  if(!S.miss){S.miss=true;S.first=o.v}
+  o.el.classList.add("x");o.dead=true;
+ }
+}
+
+function ov(a,b){return [Math.min(a.x+a.w,b.x+b.w)-Math.max(a.x,b.x),Math.min(a.y+a.h,b.y+b.h)-Math.max(a.y,b.y)]}
+function tick(){
+ const ar=$("#area"),W=ar.clientWidth,H=ar.clientHeight;
+ fruits.forEach(f=>{
+  f.w=f.el.offsetWidth;f.h=f.el.offsetHeight;
+  f.x+=f.vx;f.y+=f.vy;
+ });
+ const live=fruits.filter(f=>!f.dead);
+ for(let i=0;i<live.length;i++)for(let j=i+1;j<live.length;j++){
+  const a=live[i],b=live[j],[ox,oy]=ov(a,b);
+  if(ox>0&&oy>0){
+   if(ox<oy){const s=a.x<b.x?-1:1;a.x+=s*ox/2;b.x-=s*ox/2;a.vx=s*Math.abs(a.vx);b.vx=-s*Math.abs(b.vx)}
+   else{const s=a.y<b.y?-1:1;a.y+=s*oy/2;b.y-=s*oy/2;a.vy=s*Math.abs(a.vy);b.vy=-s*Math.abs(b.vy)}
+  }
+ }
+ fruits.forEach(f=>{
+  if(f.x<0){f.x=0;f.vx=Math.abs(f.vx)}
+  if(f.x>W-f.w){f.x=Math.max(0,W-f.w);f.vx=-Math.abs(f.vx)}
+  if(f.y<0){f.y=0;f.vy=Math.abs(f.vy)}
+  if(f.y>H-f.h){f.y=Math.max(0,H-f.h);f.vy=-Math.abs(f.vy)}
+  f.el.style.transform="translate("+f.x+"px,"+f.y+"px)";
+ });
+ raf=requestAnimationFrame(tick);
+}
+
+function finish(){
+ cancelAnimationFrame(raf);
+ $("#cp").textContent="Salin hasil";
+ $("#play").classList.add("hide");$("#res").classList.remove("hide");
+ const acc=S.ok*10,avg=(S.log.reduce((s,r)=>s+ +r.sec,0)/S.log.length).toFixed(1);
+ $("#sum").innerHTML=(S.name?"<b>"+S.name.replace(/</g,"&lt;")+"</b> · ":"")+"Tingkat "+S.lv+" · Ketepatan percobaan pertama <b>"+acc+"%</b> ("+S.ok+"/10) · Rata-rata waktu <b>"+avg+" dtk</b>";
+ let h="<tr><th>No</th><th>Soal</th><th>Kata baku</th><th>Pilihan pertama</th><th>Status</th><th>Detik</th></tr>";
+ S.log.forEach((r,i)=>{
+  const fp=S.mode===1?kata(r.first):r.first;
+  h+="<tr><td>"+(i+1)+"</td><td>"+r.n+"</td><td>"+kata(r.n)+"</td><td>"+fp+"</td><td class='"+(r.ok?"o":"b")+"'>"+(r.ok?"Tepat":"Keliru")+"</td><td>"+r.sec+"</td></tr>";
+ });
+ $("#tb").innerHTML=h;
+}
+
+if(!("speechSynthesis" in window))$("#mode").querySelector("option[value='3']").disabled=true;
+$("#go").onclick=start;
+$("#again").onclick=()=>{$("#res").classList.add("hide");$("#setup").classList.remove("hide")};
+$("#cp").onclick=()=>{
+ const t=(S.name?S.name+" | ":"")+"Tingkat "+S.lv+" | Tepat pertama "+S.ok+"/10\n"+S.log.map((r,i)=>(i+1)+". "+r.n+" ("+kata(r.n)+") "+(r.ok?"tepat":"keliru, memilih "+(S.mode===1?kata(r.first):r.first))+" "+r.sec+"dtk").join("\n");
+ try{navigator.clipboard.writeText(t);$("#cp").textContent="Tersalin ✓"}catch(e){$("#cp").textContent="Gagal menyalin"}
+};
+</script>
+</body>
+</html>
